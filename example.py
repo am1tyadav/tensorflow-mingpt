@@ -8,9 +8,10 @@ import mingpt
 def main():
     filepath = "tmp/data.txt"
     batch_size = 16
-    block_size = 8
-    embedding_dim = 64
-    num_heads = 4
+    block_size = 128
+    embedding_dim = 192
+    num_heads = 6
+    num_attention_blocks = 6
 
     if not os.path.isfile(filepath):
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -28,19 +29,22 @@ def main():
     )
 
     model = mingpt.model.create_language_model(
-        len(vocab), block_size, embedding_dim, num_heads
+        len(vocab), block_size, embedding_dim, num_heads, num_attention_blocks
     )
+
+    logger.info(model.summary())
+
     sequence = mingpt.generate.generate_sequence(
-        model, "Firs", encoder, decoder, block_size
+        model, "a", encoder, decoder, block_size
     )
 
     logger.info("Before training:")
     logger.info(sequence)
 
-    mingpt.train.train_model(model, train_generator, valid_generator)
+    model = mingpt.train.train_model(model, train_generator, valid_generator)
 
     sequence = mingpt.generate.generate_sequence(
-        model, "Firs", encoder, decoder, block_size
+        model, "a", encoder, decoder, block_size
     )
 
     logger.info("After training")

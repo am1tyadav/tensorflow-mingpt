@@ -1,7 +1,7 @@
 """Load and preprocess data for minGPT."""
 
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterable
 
 import requests
 import tensorflow as tf
@@ -156,17 +156,18 @@ def create_dataset(tokens: list[int], split: float = 0.9) -> tuple[tf.Tensor]:
 
 def batch_generator(
     data: tf.Tensor, batch_size: int, block_size: int
-) -> Callable[[], tuple[tf.Tensor]]:
+) -> Callable[[], Iterable[tuple[tf.Tensor]]]:
     num_examples = len(data)
 
-    def _batch_generator() -> tuple[tf.Tensor]:
-        indices = tf.random.uniform(
-            shape=(batch_size,), maxval=num_examples - block_size, dtype=tf.int32
-        )
-        examples = tf.stack([data[index : index + block_size] for index in indices])
-        labels = tf.stack(
-            [data[index + 1 : index + block_size + 1] for index in indices]
-        )
-        return examples, labels
+    def _batch_generator() -> Iterable[tuple[tf.Tensor]]:
+        while True:
+            indices = tf.random.uniform(
+                shape=(batch_size,), maxval=num_examples - block_size, dtype=tf.int32
+            )
+            examples = tf.stack([data[index : index + block_size] for index in indices])
+            labels = tf.stack(
+                [data[index + 1 : index + block_size + 1] for index in indices]
+            )
+            yield examples, labels
 
-    return _batch_generator
+    return _batch_generator()

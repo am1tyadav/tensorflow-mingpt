@@ -1,0 +1,18 @@
+name: mingpt-gpu-instance
+
+resources:
+  cloud: aws
+  cpus: 4+
+  disk_size: 128
+  accelerators: T4:1
+
+workdir: .
+
+setup: |
+  set -e  # Exit if any command failed.
+  conda env create -f conda.yml
+
+run: |
+  set -e  # Exit if any command failed.
+  conda activate tf-mingpt
+  python example.py
