@@ -1,0 +1,10 @@
+name: tf-mingpt
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.10
+  - tensorflow
+  - requests=2.31.0
+  - loguru
