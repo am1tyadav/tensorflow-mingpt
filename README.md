@@ -1,9 +1,15 @@
 # TensorFlow minGPT
 
-It's pretty much the same as [Andrej Karpathy's GPT Tutorial](https://www.youtube.com/watch?v=kCc8FmEb1nY) but using TensorFlow instead of PyTorch.
-
-I don't have a GPU, so my approach is to use [SkyPilot](https://github.com/skypilot-org/skypilot) to spin up a GPU instance. The following command spins up an instance and starts training the model.
+It's pretty much the same as [Andrej Karpathy's GPT Tutorial](https://www.youtube.com/watch?v=kCc8FmEb1nY) but using TensorFlow instead of PyTorch. Setup and training:
 
 ```bash
-sky launch mingpt.yml --down -i 1
+conda env create -f conda.yml
+```
+
+There are two separate commands: one to train a model and another one to generate sequences from the trained model. There are many arguments and optional parameters that can be used from the command line. More:
+
+```bash
+python mingpt.py train --help
+
+python mingpt.py generate --help # E.g. python mingpt.py generate "hello"
 ```

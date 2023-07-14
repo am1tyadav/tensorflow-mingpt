@@ -15,6 +15,6 @@ setup: |
 run: |
   set -e  # Exit if any command failed.
   conda activate tf-mingpt
-  python mingpt.py generate "First" False
+  python mingpt.py generate "First" --no-pretrained # This will generate garbage
   python mingpt.py train
-  python mingpt.py generate "First" True
+  python mingpt.py generate "First" # This is generate slightly better garbage

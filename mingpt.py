@@ -34,6 +34,9 @@ NumHeadsOption = Annotated[
 NumAttentionBlocksOption = Annotated[
     int, typer.Option(help="Number of attention blocks to be used.")
 ]
+PretrainedOption = Annotated[
+    bool, typer.Option(help="If to use the pretrained model or not")
+]
 
 
 def ensure_load_data(filepath: str) -> str:
@@ -46,15 +49,13 @@ def ensure_load_data(filepath: str) -> str:
 @app.command()
 def generate(
     text: Annotated[str, typer.Argument(help="Starting text")],
-    use_pretrained: Annotated[
-        bool, typer.Argument(help="If to use the pretrained model or not")
-    ] = True,
     filepath: FilePathOption = "./tmp/data.txt",
     model_filepath: ModelPathOption = "./tmp/mingpt.h5",
     block_size: BlockSizeOption = 256,
     embedding_dim: EmbeddingDimOption = 384,
     num_heads: NumHeadsOption = 6,
     num_attention_blocks: NumAttentionBlocksOption = 6,
+    pretrained: PretrainedOption = True,
 ):
     raw_data = ensure_load_data(filepath)
     vocab, encoder, decoder = mingpt.data.create_vocab(raw_data)
@@ -63,7 +64,7 @@ def generate(
         len(vocab), block_size, embedding_dim, num_heads, num_attention_blocks
     )
 
-    if use_pretrained:
+    if pretrained:
         model.load_weights(model_filepath)
         logger.info("Model checkpoint loaded")
 
@@ -86,14 +87,12 @@ def generate(
 def train(
     filepath: FilePathOption = "tmp/data.txt",
     model_filepath: ModelPathOption = "./tmp/mingpt.h5",
-    batch_size: BatchSizeOption = 16,
+    batch_size: BatchSizeOption = 12,
     block_size: BlockSizeOption = 256,
     embedding_dim: EmbeddingDimOption = 384,
     num_heads: NumHeadsOption = 6,
     num_attention_blocks: NumAttentionBlocksOption = 6,
-    allow_pretrained: Annotated[
-        bool, typer.Option(help="Allow loading pretrained models")
-    ] = True,
+    pretrained: PretrainedOption = True,
 ):
     raw_data = ensure_load_data(filepath)
     vocab, encoder, decoder = mingpt.data.create_vocab(raw_data)
@@ -126,7 +125,7 @@ def train(
             len(vocab), block_size, embedding_dim, num_heads, num_attention_blocks
         )
 
-        if allow_pretrained and os.path.isfile(model_filepath):
+        if pretrained and os.path.isfile(model_filepath):
             model.load_weights(model_filepath)
             logger.info("Model checkpoint loaded")
 

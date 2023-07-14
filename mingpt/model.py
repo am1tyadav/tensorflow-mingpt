@@ -7,7 +7,7 @@ class AffinityLayer(tf.keras.layers.Layer):
         self,
         embedding_dim: int,
         block_size: int,
-        dropout_rate: float = 0.25,
+        dropout_rate: float = 0.4,
         trainable=True,
         name=None,
         dtype=None,
@@ -62,7 +62,7 @@ def create_multi_head_attention_block(
     head_size: int,
     block_size: int,
     embedding_dim: int,
-    dropout_rate: float = 0.25,
+    dropout_rate: float = 0.4,
 ) -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
 
