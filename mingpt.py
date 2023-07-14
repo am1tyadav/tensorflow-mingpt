@@ -95,14 +95,14 @@ def train(
     pretrained: PretrainedOption = True,
 ):
     raw_data = ensure_load_data(filepath)
-    vocab, encoder, decoder = mingpt.data.create_vocab(raw_data)
+    vocab, encoder, _ = mingpt.data.create_vocab(raw_data)
 
     train_data, valid_data = mingpt.data.create_dataset(encoder(raw_data))
     train_generator = mingpt.data.batch_generator(
-        data=train_data, batch_size=batch_size, block_size=block_size
+        data=train_data, block_size=block_size
     )
     valid_generator = mingpt.data.batch_generator(
-        data=valid_data, batch_size=batch_size, block_size=block_size
+        data=valid_data, block_size=block_size
     )
 
     mirrored_strategy = tf.distribute.MirroredStrategy()
@@ -133,7 +133,7 @@ def train(
 
     logger.info(model.summary())
 
-    _ = mingpt.train.train_model(
+    mingpt.train.train_model(
         model,
         model_filepath,
         train_generator,

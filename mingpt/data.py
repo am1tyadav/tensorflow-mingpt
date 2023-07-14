@@ -117,7 +117,7 @@ def create_vocab(
 
     Args:
     ----
-        data (str): The text data to create the vocabulary from.
+        data (str): The text corpus to create the vocabulary from.
 
     Returns:
     -------
@@ -126,7 +126,7 @@ def create_vocab(
 
     Example:
     -------
-        >>> vocab, encoder, decoder = create_vocab("Hello World!")
+        >>> vocab, encoder, decoder = create_vocab("abcd1234")
     """
     vocab = sorted(list(set(data)))
     char_to_index = {char: index for index, char in enumerate(vocab)}
@@ -140,6 +140,24 @@ def create_vocab(
 
 
 def create_dataset(tokens: list[int], split: float = 0.8) -> tuple[tf.Tensor]:
+    """Create a dataset by splitting tokens into training and validation sets.
+
+    Args:
+    ----
+        tokens (list[int]): A list of integers representing tokens.
+        split (float, optional): The proportion of data to allocate for training.
+            Defaults to 0.8.
+
+    Returns:
+    -------
+        tuple[tf.Tensor]: A tuple containing the training and validation datasets
+            as TensorFlow tensors.
+
+    Raises:
+    ------
+        AssertionError: If the split value is not between 0 and 1 (inclusive).
+    """
+
     if split < 0.0 or split > 1.0:
         raise AssertionError("split must be between 0 and 1")
 
@@ -154,9 +172,21 @@ def create_dataset(tokens: list[int], split: float = 0.8) -> tuple[tf.Tensor]:
     return training_data, validation_data
 
 
-def batch_generator(
-    data: tf.Tensor, batch_size: int, block_size: int
-) -> tf.data.Dataset:
+def batch_generator(data: tf.Tensor, block_size: int) -> tf.data.Dataset:
+    """Generate TensorFlow Dataset from tensor slices. Each item in the Dataset
+    is a pair of examples and labels.
+
+    Args:
+    ----
+        data (tf.Tensor): The input data as a TensorFlow tensor.
+        block_size (int): The size of each example block. This is the number
+            of consecutive tokens to be considered as a single example.
+
+    Returns:
+    -------
+        tf.data.Dataset: A dataset containing the examples and labels.
+    """
+
     num_examples = len(data) // block_size
 
     if len(data) % block_size == 0:
@@ -172,16 +202,3 @@ def batch_generator(
     labels = tf.data.Dataset.from_tensor_slices(labels)
 
     return tf.data.Dataset.zip((examples, labels))
-
-    # def _batch_generator() -> Iterable[tuple[tf.Tensor]]:
-    #     while True:
-    #         indices = tf.random.uniform(
-    #             shape=(batch_size,), maxval=num_examples - block_size, dtype=tf.int32
-    #         )
-    #         examples = tf.stack([data[index : index + block_size] for index in indices])
-    #         labels = tf.stack(
-    #             [data[index + 1 : index + block_size + 1] for index in indices]
-    #         )
-    #         yield examples, labels
-
-    # return _batch_generator()
