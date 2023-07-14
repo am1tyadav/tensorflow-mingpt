@@ -1,7 +1,7 @@
 """Load and preprocess data for minGPT."""
 
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Callable
 
 import requests
 import tensorflow as tf
@@ -139,7 +139,7 @@ def create_vocab(
     return vocab, encoder, decoder
 
 
-def create_dataset(tokens: list[int], split: float = 0.9) -> tuple[tf.Tensor]:
+def create_dataset(tokens: list[int], split: float = 0.8) -> tuple[tf.Tensor]:
     if split < 0.0 or split > 1.0:
         raise AssertionError("split must be between 0 and 1")
 
@@ -148,26 +148,40 @@ def create_dataset(tokens: list[int], split: float = 0.9) -> tuple[tf.Tensor]:
     training_data = tokens[:num_training_examples]
     validation_data = tokens[num_training_examples:]
 
-    training_data = tf.convert_to_tensor(training_data, dtype=tf.int32)
-    validation_data = tf.convert_to_tensor(validation_data, dtype=tf.int32)
+    training_data = tf.convert_to_tensor(training_data, dtype=tf.int64)
+    validation_data = tf.convert_to_tensor(validation_data, dtype=tf.int64)
 
     return training_data, validation_data
 
 
 def batch_generator(
     data: tf.Tensor, batch_size: int, block_size: int
-) -> Callable[[], Iterable[tuple[tf.Tensor]]]:
-    num_examples = len(data)
+) -> tf.data.Dataset:
+    num_examples = len(data) // block_size
 
-    def _batch_generator() -> Iterable[tuple[tf.Tensor]]:
-        while True:
-            indices = tf.random.uniform(
-                shape=(batch_size,), maxval=num_examples - block_size, dtype=tf.int32
-            )
-            examples = tf.stack([data[index : index + block_size] for index in indices])
-            labels = tf.stack(
-                [data[index + 1 : index + block_size + 1] for index in indices]
-            )
-            yield examples, labels
+    if len(data) % block_size == 0:
+        data = tf.concat([data, [0]])
 
-    return _batch_generator()
+    examples = data[: num_examples * block_size]
+    labels = data[1 : num_examples * block_size + 1]
+
+    examples = tf.reshape(examples, [num_examples, block_size])
+    labels = tf.reshape(labels, [num_examples, block_size])
+
+    examples = tf.data.Dataset.from_tensor_slices(examples)
+    labels = tf.data.Dataset.from_tensor_slices(labels)
+
+    return tf.data.Dataset.zip((examples, labels))
+
+    # def _batch_generator() -> Iterable[tuple[tf.Tensor]]:
+    #     while True:
+    #         indices = tf.random.uniform(
+    #             shape=(batch_size,), maxval=num_examples - block_size, dtype=tf.int32
+    #         )
+    #         examples = tf.stack([data[index : index + block_size] for index in indices])
+    #         labels = tf.stack(
+    #             [data[index + 1 : index + block_size + 1] for index in indices]
+    #         )
+    #         yield examples, labels
+
+    # return _batch_generator()

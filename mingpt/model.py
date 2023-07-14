@@ -7,6 +7,7 @@ class AffinityLayer(tf.keras.layers.Layer):
         self,
         embedding_dim: int,
         block_size: int,
+        dropout_rate: float = 0.25,
         trainable=True,
         name=None,
         dtype=None,
@@ -16,6 +17,8 @@ class AffinityLayer(tf.keras.layers.Layer):
         super().__init__(trainable, name, dtype, dynamic, **kwargs)
 
         self._embedding_dim = embedding_dim
+        self._dropout_rate = dropout_rate
+
         self._tril = tf.linalg.LinearOperatorLowerTriangular(
             tf.cast(tf.ones((block_size, block_size)), dtype=tf.bool)
         ).to_dense()
@@ -36,7 +39,7 @@ class AffinityLayer(tf.keras.layers.Layer):
         affinities = tf.nn.softmax(affinities)
         # Softmax is applied on the last dim, shape remains the same: batch_size, block_size, block size
         # dot product between this and value will give us the final affinities, return batch, block, head
-        affinities = tf.nn.dropout(affinities, 0.2)
+        affinities = tf.nn.dropout(affinities, self._dropout_rate)
         return tf.matmul(affinities, value)
 
 
@@ -55,32 +58,41 @@ def create_single_head_attention_block(
 
 
 def create_multi_head_attention_block(
-    num_heads: int, head_size: int, block_size: int, embedding_dim: int
+    num_heads: int,
+    head_size: int,
+    block_size: int,
+    embedding_dim: int,
+    dropout_rate: float = 0.25,
 ) -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
 
-    inputs = tf.keras.layers.LayerNormalization()(inputs)
+    normalised_inputs = tf.keras.layers.LayerNormalization()(inputs)
 
     outputs = [
-        create_single_head_attention_block(head_size, block_size, embedding_dim)(inputs)
+        create_single_head_attention_block(head_size, block_size, embedding_dim)(
+            normalised_inputs
+        )
         for _ in range(0, num_heads)
     ]
 
     mh_attention_outputs = tf.keras.layers.concatenate(outputs, axis=-1)
 
-    projection = tf.keras.layers.Dense(embedding_dim)(mh_attention_outputs)
-    projection = tf.keras.layers.Dropout(0.2)(projection)
+    projection = tf.keras.layers.Dense(embedding_dim, activation="relu")(
+        mh_attention_outputs
+    )
+    projection = tf.keras.layers.Dropout(dropout_rate)(projection)
     projection_with_skip_outputs = tf.keras.layers.Add()(
         [projection, inputs]
-    )  # inputs are normalised
+    )  # inputs are origninal, not normalised
     projection_with_skip_outputs = tf.keras.layers.LayerNormalization()(
         projection_with_skip_outputs
     )
+
     linear_head_outputs = tf.keras.layers.Dense(4 * embedding_dim, activation="relu")(
         projection_with_skip_outputs
     )
     linear_head_projected = tf.keras.layers.Dense(embedding_dim)(linear_head_outputs)
-    linear_head_projected = tf.keras.layers.Dropout(0.2)(linear_head_projected)
+    linear_head_projected = tf.keras.layers.Dropout(dropout_rate)(linear_head_projected)
     outputs = tf.keras.layers.Add()(
         [linear_head_projected, projection_with_skip_outputs]
     )
@@ -94,6 +106,7 @@ def create_language_model(
     embedding_dim: int,
     num_heads: int,
     num_attention_blocks: int = 3,
+    learning_rate=3e-4,
 ) -> tf.keras.Model:
     head_size = embedding_dim // num_heads
 
@@ -122,5 +135,14 @@ def create_language_model(
         outputs = multi_head_block(outputs)
 
     outputs = tf.keras.layers.LayerNormalization()(outputs)
-    outputs = tf.keras.layers.Dense(vocab_size, activation="softmax")(outputs)
-    return tf.keras.models.Model(inputs_tokens, outputs)
+    outputs = tf.keras.layers.Dense(vocab_size, name="logits")(outputs)
+    outputs = tf.keras.layers.Softmax()(outputs)
+
+    model = tf.keras.models.Model(inputs_tokens, outputs)
+
+    model.compile(
+        optimizer=tf.optimizers.Adam(learning_rate=learning_rate),
+        loss=tf.losses.SparseCategoricalCrossentropy(),
+    )
+
+    return model

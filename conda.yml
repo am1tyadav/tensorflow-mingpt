@@ -8,3 +8,4 @@ dependencies:
   - tensorflow
   - requests=2.31.0
   - loguru
+  - typer

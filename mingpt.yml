@@ -4,7 +4,7 @@ resources:
   cloud: aws
   cpus: 4+
   disk_size: 128
-  accelerators: T4:1
+  accelerators: T4:4
 
 workdir: .
 
@@ -15,4 +15,6 @@ setup: |
 run: |
   set -e  # Exit if any command failed.
   conda activate tf-mingpt
-  python example.py
+  python mingpt.py generate "First" False
+  python mingpt.py train
+  python mingpt.py generate "First" True
