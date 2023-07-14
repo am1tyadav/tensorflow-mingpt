@@ -12,7 +12,7 @@ class AffinityLayer(tf.keras.layers.Layer):
         name=None,
         dtype=None,
         dynamic=False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(trainable, name, dtype, dynamic, **kwargs)
 
@@ -44,7 +44,7 @@ class AffinityLayer(tf.keras.layers.Layer):
 
 
 def create_single_head_attention_block(
-    head_size: int, block_size: int, embedding_dim: int
+    head_size: int, block_size: int, embedding_dim: int, index: int
 ) -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
 
@@ -56,7 +56,9 @@ def create_single_head_attention_block(
 
     affinities = AffinityLayer(embedding_dim, block_size)([query, key, value])
 
-    return tf.keras.models.Model(inputs, affinities)
+    return tf.keras.models.Model(
+        inputs, affinities, name=f"attention_head_{index}_model"
+    )
 
 
 def create_multi_head_attention_block(
@@ -64,6 +66,7 @@ def create_multi_head_attention_block(
     head_size: int,
     block_size: int,
     embedding_dim: int,
+    index: int,
     dropout_rate: float = 0.4,
 ) -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
@@ -71,10 +74,10 @@ def create_multi_head_attention_block(
     normalised_inputs = tf.keras.layers.LayerNormalization()(inputs)
 
     outputs = [
-        create_single_head_attention_block(head_size, block_size, embedding_dim)(
-            normalised_inputs
-        )
-        for _ in range(0, num_heads)
+        create_single_head_attention_block(
+            head_size, block_size, embedding_dim, index * num_heads + sh_index
+        )(normalised_inputs)
+        for sh_index in range(0, num_heads)
     ]
 
     mh_attention_outputs = tf.keras.layers.concatenate(outputs, axis=-1)
@@ -99,7 +102,7 @@ def create_multi_head_attention_block(
         [linear_head_projected, projection_with_skip_outputs]
     )
 
-    return tf.keras.models.Model(inputs, outputs)
+    return tf.keras.models.Model(inputs, outputs, name=f"mh_block_{index}_model")
 
 
 def create_language_model(
@@ -126,12 +129,13 @@ def create_language_model(
 
     outputs = tf.keras.layers.Add()([token_embeddings, position_embeddings])
 
-    for _ in range(0, num_attention_blocks):
+    for index in range(0, num_attention_blocks):
         multi_head_block = create_multi_head_attention_block(
             num_heads=num_heads,
             head_size=head_size,
             block_size=block_size,
             embedding_dim=embedding_dim,
+            index=index,
         )
 
         outputs = multi_head_block(outputs)
@@ -140,10 +144,10 @@ def create_language_model(
     outputs = tf.keras.layers.Dense(vocab_size, name="logits")(outputs)
     outputs = tf.keras.layers.Softmax()(outputs)
 
-    model = tf.keras.models.Model(inputs_tokens, outputs)
+    model = tf.keras.models.Model(inputs_tokens, outputs, name="mingpt")
 
     model.compile(
-        optimizer=tf.optimizers.Adam(learning_rate=learning_rate),
+        optimizer=tf.optimizers.Adam(learning_rate=learning_rate, clipvalue=1.0),
         loss=tf.losses.SparseCategoricalCrossentropy(),
     )
 

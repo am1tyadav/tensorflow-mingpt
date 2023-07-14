@@ -8,13 +8,14 @@ import tensorflow as tf
 from loguru import logger
 
 
-def download_example_data(filepath: Path):
+def download_example_data(filepath: Path, dataset_url: str):
     """
     Downloads example data from a given URL and saves it to the specified filepath.
 
     Args:
     ----
         filepath (Path): The path to save the downloaded file.
+        dataset_name (str): Name of the dataset to be downloaded.
 
     Returns:
     -------
@@ -24,10 +25,10 @@ def download_example_data(filepath: Path):
     -------
         >>> download_example_data(Path("data/input.txt"))
     """
-    url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+
     timeout = 1200
 
-    response = requests.get(url=url, timeout=timeout)
+    response = requests.get(url=dataset_url, timeout=timeout)
     content = response.content.decode()
 
     with open(filepath, "w") as _file:

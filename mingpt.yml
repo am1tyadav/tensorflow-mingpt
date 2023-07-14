@@ -15,6 +15,6 @@ setup: |
 run: |
   set -e  # Exit if any command failed.
   conda activate tf-mingpt
-  python mingpt.py generate "First" --no-pretrained # This will generate garbage
-  python mingpt.py train
-  python mingpt.py generate "First" # This is generate slightly better garbage
+  python main.py generate a --config-filepath ./shakespeare.yml --no-pretrained # This will generate garbage
+  python main.py train --config-filepath ./shakespeare.yml
+  python main.py generate a --config-filepath ./shakespeare.yml # This is generate slightly better garbage

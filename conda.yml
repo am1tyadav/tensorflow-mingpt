@@ -9,3 +9,4 @@ dependencies:
   - requests=2.31.0
   - loguru
   - typer
+  - pydantic
