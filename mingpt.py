@@ -87,7 +87,7 @@ def generate(
 def train(
     filepath: FilePathOption = "tmp/data.txt",
     model_filepath: ModelPathOption = "./tmp/mingpt.h5",
-    batch_size: BatchSizeOption = 12,
+    batch_size: BatchSizeOption = 16,
     block_size: BlockSizeOption = 256,
     embedding_dim: EmbeddingDimOption = 384,
     num_heads: NumHeadsOption = 6,
@@ -105,14 +105,16 @@ def train(
         data=valid_data, batch_size=batch_size, block_size=block_size
     )
 
-    num_training_examples = len(train_generator) // batch_size
-    num_validation_examples = len(valid_generator) // batch_size
-
     mirrored_strategy = tf.distribute.MirroredStrategy()
 
     num_gpus = mirrored_strategy.num_replicas_in_sync
 
     logger.info(f"Number of devices: {num_gpus}")
+
+    # The examples will be spread out over all gpus, so per epoch steps will
+    # reduce accordingly, let's run through all examples per epoch roughly twice
+    num_training_examples = 2 * len(train_generator) // (num_gpus * batch_size)
+    num_validation_examples = 2 * len(valid_generator) // (num_gpus * batch_size)
 
     train_generator = train_generator.batch(num_gpus * batch_size).repeat()
     valid_generator = valid_generator.batch(num_gpus * batch_size).repeat()

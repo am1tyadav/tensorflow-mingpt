@@ -48,9 +48,11 @@ def create_single_head_attention_block(
 ) -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
 
-    key = tf.keras.layers.Dense(head_size)(inputs)  # batch_dim, block_size, head_size
-    query = tf.keras.layers.Dense(head_size)(inputs)
-    value = tf.keras.layers.Dense(head_size)(inputs)
+    key = tf.keras.layers.Dense(head_size, use_bias=False)(
+        inputs
+    )  # batch_dim, block_size, head_size
+    query = tf.keras.layers.Dense(head_size, use_bias=False)(inputs)
+    value = tf.keras.layers.Dense(head_size, use_bias=False)(inputs)
 
     affinities = AffinityLayer(embedding_dim, block_size)([query, key, value])
 
