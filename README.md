@@ -4,12 +4,25 @@ It's pretty much the same as [Andrej Karpathy's GPT Tutorial](https://www.youtub
 
 ```bash
 conda env create -f conda.yml
+
+conda activate tf-mingpt
+
+python main.py --help
 ```
 
-There are two separate commands: one to train a model and another one to generate sequences from the trained model. There are many arguments and optional parameters that can be used from the command line. More:
+There are two commands:
 
-```bash
-python mingpt.py train --help
+1. `python main.py train --config-file shakespeare.yml` - Train a model
+2. `python main.py generate --config-file shakespeare.yml` - Generate sequences from the trained model
 
-python mingpt.py generate --help # E.g. python mingpt.py generate "hello"
-```
+Filepath to config files will need to be explicityly provided as the default is `superhero.yml` which creates a really small model. The `shakespeare.yml` config has the same parameter values as used in the tutorial above.
+
+I'd suggest training with `superhero.yml` config if you have only a CPU.
+
+If you want to train with the `shakespeare.yml` config, and don't have a GPU locally, I'd suggest setting up [SkyPilot](https://skypilot.readthedocs.io/en/latest/) and launching the provided SkyPilot task. E.g. `sky launch mingpt.yml`
+
+## Next
+
+- Update model to achieve a loss of ~1.0 on both training and validation
+- Refactor model and add docs
+- What is a test anyway? :/

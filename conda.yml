@@ -10,3 +10,4 @@ dependencies:
   - loguru
   - typer
   - pydantic
+  - pyyaml

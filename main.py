@@ -27,7 +27,7 @@ pretrained = True
 config_filepath = "./superhero.yml"
 
 
-app = typer.Typer(name="mingpt")
+app = typer.Typer(name="mingpt", help="Train minGPT with TensorFlow")
 
 
 ConfigFilePathOption = Annotated[Path, typer.Option(help="Path to the config file.")]

@@ -35,7 +35,7 @@ def train_model(
         epochs=epochs,
         validation_steps=validation_steps,
         callbacks=[
-            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, patience=3, min_lr=6e-5),
+            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, patience=3, min_lr=1e-5),
             tf.keras.callbacks.EarlyStopping(patience=7),
             tf.keras.callbacks.ModelCheckpoint(model_filepath, save_best_only=True),
         ],
