@@ -4,7 +4,6 @@ resources:
   cloud: aws
   region: us-east-1
   cpus: 4+
-  disk_size: 128
   accelerators: T4:4
 
 workdir: .
