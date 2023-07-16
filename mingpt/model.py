@@ -7,7 +7,7 @@ class AffinityLayer(tf.keras.layers.Layer):
         self,
         embedding_dim: int,
         block_size: int,
-        dropout_rate: float = 0.4,
+        dropout_rate: float,
         trainable=True,
         name=None,
         dtype=None,
@@ -44,7 +44,7 @@ class AffinityLayer(tf.keras.layers.Layer):
 
 
 def create_single_head_attention_block(
-    head_size: int, block_size: int, embedding_dim: int, index: int
+    head_size: int, block_size: int, embedding_dim: int, dropout_rate: float
 ) -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
 
@@ -54,10 +54,26 @@ def create_single_head_attention_block(
     query = tf.keras.layers.Dense(head_size, use_bias=False)(inputs)
     value = tf.keras.layers.Dense(head_size, use_bias=False)(inputs)
 
-    affinities = AffinityLayer(embedding_dim, block_size)([query, key, value])
+    affinities = AffinityLayer(embedding_dim, block_size, dropout_rate)(
+        [query, key, value]
+    )
 
-    return tf.keras.models.Model(
-        inputs, affinities, name=f"attention_head_{index}_model"
+    return tf.keras.models.Model(inputs, affinities)
+
+
+def create_feed_forward_network(
+    block_size: int, embedding_dim: int, dropout_rate: float
+):
+    return tf.keras.models.Sequential(
+        [
+            tf.keras.layers.Dense(
+                4 * embedding_dim,
+                activation="relu",
+                input_shape=(block_size, embedding_dim),
+            ),
+            tf.keras.layers.Dense(embedding_dim),
+            tf.keras.layers.Dropout(dropout_rate),
+        ]
     )
 
 
@@ -66,8 +82,7 @@ def create_multi_head_attention_block(
     head_size: int,
     block_size: int,
     embedding_dim: int,
-    index: int,
-    dropout_rate: float = 0.4,
+    dropout_rate: float,
 ) -> tf.keras.Model:
     inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
 
@@ -75,9 +90,9 @@ def create_multi_head_attention_block(
 
     outputs = [
         create_single_head_attention_block(
-            head_size, block_size, embedding_dim, index * num_heads + sh_index
+            head_size, block_size, embedding_dim, dropout_rate
         )(normalised_inputs)
-        for sh_index in range(0, num_heads)
+        for _ in range(0, num_heads)
     ]
 
     mh_attention_outputs = tf.keras.layers.concatenate(outputs, axis=-1)
@@ -86,23 +101,30 @@ def create_multi_head_attention_block(
         mh_attention_outputs
     )
     projection = tf.keras.layers.Dropout(dropout_rate)(projection)
-    projection_with_skip_outputs = tf.keras.layers.Add()(
-        [projection, inputs]
-    )  # inputs are origninal, not normalised
-    projection_with_skip_outputs = tf.keras.layers.LayerNormalization()(
-        projection_with_skip_outputs
-    )
+    return tf.keras.models.Model(inputs, projection)
 
-    linear_head_outputs = tf.keras.layers.Dense(4 * embedding_dim, activation="relu")(
-        projection_with_skip_outputs
-    )
-    linear_head_projected = tf.keras.layers.Dense(embedding_dim)(linear_head_outputs)
-    linear_head_projected = tf.keras.layers.Dropout(dropout_rate)(linear_head_projected)
-    outputs = tf.keras.layers.Add()(
-        [linear_head_projected, projection_with_skip_outputs]
-    )
 
-    return tf.keras.models.Model(inputs, outputs, name=f"mh_block_{index}_model")
+def create_full_block(
+    block_size: int,
+    embedding_dim: int,
+    num_heads: int,
+    head_size: int,
+    dropout_rate: float,
+):
+    inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
+
+    normalised = tf.keras.layers.LayerNormalization()(inputs)
+    mh_output = create_multi_head_attention_block(
+        num_heads, head_size, block_size, embedding_dim, dropout_rate
+    )(normalised)
+    added = tf.keras.layers.Add()([mh_output, inputs])
+    normalised = tf.keras.layers.LayerNormalization()(added)
+    outputs = create_feed_forward_network(block_size, embedding_dim, dropout_rate)(
+        normalised
+    )
+    outputs = tf.keras.layers.Add()([outputs, added])
+
+    return tf.keras.models.Model(inputs, outputs)
 
 
 def create_language_model(
@@ -110,8 +132,9 @@ def create_language_model(
     block_size: int,
     embedding_dim: int,
     num_heads: int,
-    num_attention_blocks: int = 3,
-    learning_rate=3e-4,
+    num_attention_blocks: int,
+    dropout_rate: float,
+    learning_rate: float,
 ) -> tf.keras.Model:
     head_size = embedding_dim // num_heads
 
@@ -129,16 +152,12 @@ def create_language_model(
 
     outputs = tf.keras.layers.Add()([token_embeddings, position_embeddings])
 
-    for index in range(0, num_attention_blocks):
-        multi_head_block = create_multi_head_attention_block(
-            num_heads=num_heads,
-            head_size=head_size,
-            block_size=block_size,
-            embedding_dim=embedding_dim,
-            index=index,
+    for _ in range(0, num_attention_blocks):
+        block = create_full_block(
+            block_size, embedding_dim, num_heads, head_size, dropout_rate
         )
 
-        outputs = multi_head_block(outputs)
+        outputs = block(outputs)
 
     outputs = tf.keras.layers.LayerNormalization()(outputs)
     outputs = tf.keras.layers.Dense(vocab_size, name="logits")(outputs)

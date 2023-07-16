@@ -20,6 +20,9 @@ class MinGPTConfig(BaseModel):
     embedding_dim: int
     num_heads_per_block: int
     num_attention_blocks: int
+    dropout_rate: float
+    learning_rate: float
+    num_tokens_to_generate: int
 
 
 # Default values
@@ -52,7 +55,9 @@ def ensure_load_data(filepath: Path, dataset_url: str) -> str:
 
 @app.command()
 def generate(
-    text: Annotated[str, typer.Argument(help="Starting text")],
+    text_filepath: Annotated[
+        Path, typer.Argument(help="Path to input text file for generating sequence.")
+    ],
     config_filepath: ConfigFilePathOption = config_filepath,
     pretrained: PretrainedOption = pretrained,
 ):
@@ -66,13 +71,16 @@ def generate(
         config.embedding_dim,
         config.num_heads_per_block,
         config.num_attention_blocks,
+        config.dropout_rate,
+        config.learning_rate,
     )
 
     if pretrained:
         model.load_weights(config.model_filepath)
         logger.info("Model checkpoint loaded")
 
-    input_tokens = encoder(text)
+    raw_input_text = mingpt.data.load_data(text_filepath)
+    input_tokens = encoder(raw_input_text)
     num_tokens = len(input_tokens)
 
     if num_tokens > config.block_size:
@@ -83,7 +91,10 @@ def generate(
         ) + input_tokens
 
     sequence = mingpt.generate.generate_sequence(
-        model=model, tokens=input_tokens, block_size=config.block_size
+        model=model,
+        tokens=input_tokens,
+        block_size=config.block_size,
+        num_tokens_to_generate=config.num_tokens_to_generate,
     )
 
     logger.info(decoder(sequence))
@@ -130,6 +141,8 @@ def train(
             config.embedding_dim,
             config.num_heads_per_block,
             config.num_attention_blocks,
+            config.dropout_rate,
+            config.learning_rate,
         )
 
         if pretrained and os.path.isfile(config.model_filepath):
