@@ -24,5 +24,4 @@ If you want to train with the `shakespeare.yml` config, and don't have a GPU loc
 ## Next
 
 - Update model to achieve a loss of ~1.4 on validation (currently ~1.7)
-- ~~Refactor model~~ and add docs
 - What is a test anyway? :/
