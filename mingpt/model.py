@@ -98,6 +98,13 @@ class AffinityLayer(tf.keras.layers.Layer):
         affinities = tf.nn.dropout(affinities, self._dropout_rate)
         return tf.matmul(affinities, value)
 
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {"_embedding_dim": self._embedding_dim, "_dropout_rate": self._dropout_rate}
+        )
+        return config
+
 
 def create_single_head_attention_block(
     head_size: int, block_size: int, embedding_dim: int, dropout_rate: float

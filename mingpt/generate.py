@@ -26,7 +26,7 @@ def generate_sequence(
         list[int]: A sequence of tokens that include the predicted tokens
             following the input tokens.
     """
-
+    tokens = tokens[-block_size:]
     tokens = tf.convert_to_tensor(tokens, dtype=tf.int64)
 
     generation_model = tf.keras.models.Model(

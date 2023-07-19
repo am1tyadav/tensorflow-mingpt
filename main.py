@@ -80,6 +80,9 @@ def generate(
         logger.info("Model checkpoint loaded")
 
     raw_input_text = mingpt.data.load_data(text_filepath)
+
+    logger.info(f"Ending sequence: {raw_input_text[-config.block_size:]}")
+
     input_tokens = encoder(raw_input_text)
     num_tokens = len(input_tokens)
 
