@@ -42,7 +42,6 @@ PretrainedOption = Annotated[
 def load_config_file(filepath: Path) -> MinGPTConfig:
     with open(filepath, "r") as _file:
         config_data = yaml.safe_load(_file)
-
     return MinGPTConfig(**config_data)
 
 
@@ -76,7 +75,8 @@ def generate(
     )
 
     if pretrained:
-        model.load_weights(config.model_filepath)
+        model_filepath = str(config.model_filepath)
+        model.load_weights(model_filepath)
         logger.info("Model checkpoint loaded")
 
     raw_input_text = mingpt.data.load_data(text_filepath)
@@ -137,6 +137,8 @@ def train(
     train_generator = mirrored_strategy.experimental_distribute_dataset(train_generator)
     valid_generator = mirrored_strategy.experimental_distribute_dataset(valid_generator)
 
+    model_filepath = str(config.model_filepath)
+
     with mirrored_strategy.scope():
         model = mingpt.model.create_language_model(
             len(vocab),
@@ -148,15 +150,15 @@ def train(
             config.learning_rate,
         )
 
-        if pretrained and os.path.isfile(config.model_filepath):
-            model.load_weights(config.model_filepath)
+        if pretrained and os.path.isfile(model_filepath):
+            model.load_weights(model_filepath)
             logger.info("Model checkpoint loaded")
 
     logger.info(model.summary())
 
     mingpt.train.train_model(
         model,
-        config.model_filepath,
+        model_filepath,
         train_generator,
         valid_generator,
         steps=num_training_examples,

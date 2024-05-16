@@ -2,6 +2,9 @@ import numpy as np
 import tensorflow as tf
 
 
+EPS = 1e-7
+
+
 class AffinityLayer(tf.keras.layers.Layer):
     """A custom Keras layer for computing attention-based affinities.
 
@@ -217,7 +220,7 @@ def create_multi_head_attention_block(
 
     inputs = tf.keras.layers.Input(shape=(block_size, embedding_dim))
 
-    normalised_inputs = tf.keras.layers.LayerNormalization()(inputs)
+    normalised_inputs = tf.keras.layers.LayerNormalization(epsilon=EPS)(inputs)
 
     outputs = [
         create_single_head_attention_block(
@@ -272,7 +275,7 @@ def create_full_block(
         num_heads, head_size, block_size, embedding_dim, dropout_rate
     )(inputs)
     added = tf.keras.layers.Add()([mh_output, inputs])
-    normalised = tf.keras.layers.LayerNormalization()(added)
+    normalised = tf.keras.layers.LayerNormalization(epsilon=EPS)(added)
     outputs = create_feed_forward_network(block_size, embedding_dim, dropout_rate)(
         normalised
     )
@@ -338,7 +341,7 @@ def create_language_model(
 
         outputs = block(outputs)
 
-    outputs = tf.keras.layers.LayerNormalization()(outputs)
+    outputs = tf.keras.layers.LayerNormalization(epsilon=EPS)(outputs)
     outputs = tf.keras.layers.Dense(vocab_size, name="logits")(outputs)
     outputs = tf.keras.layers.Softmax()(outputs)
 

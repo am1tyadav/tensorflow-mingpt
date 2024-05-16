@@ -19,7 +19,7 @@ Filepath to config files will need to be explicityly provided as the default is 
 
 I'd suggest training with `superhero.yml` config if you have only a CPU.
 
-If you want to train with the `shakespeare.yml` config, and don't have a GPU locally, I'd suggest setting up [SkyPilot](https://skypilot.readthedocs.io/en/latest/) and launching the provided SkyPilot task. E.g. `sky launch mingpt.yml`
+If you want to train with the `shakespeare.yml` config, and don't have a GPU locally, I'd suggest setting up [SkyPilot](https://skypilot.readthedocs.io/en/latest/) and launching the provided SkyPilot task. E.g. `sky launch mingpt.yml` for training on shakespeare dataset and `sky launch mingpt.yml --env MODEL_PREFIX=superhero` for the smaller superhero dataset.
 
 ## Next
 
